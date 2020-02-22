@@ -88,6 +88,39 @@ def get_ind_file(filetype="rets", nind=30, ew=False):
     ind.columns = ind.columns.str.strip()
     return ind
 
+def get_ind_returns():
+    """
+    Load and format the Ken French 30 Industry Portfolios Value Weighted Monthly Returns
+    """
+    ind = pd.read_csv("data/ind30_m_ew_rets.csv", header=0, index_col=0)/100
+    ind.index = pd.to_datetime(ind.index, format="%Y%m").to_period('M')
+    ind.columns = ind.columns.str.strip()
+    return ind
+
+def plot_ef(n_points, er, cov, style='.-', legend=False, show_cml=False, riskfree_rate=0):
+    """
+    Plots the multi-asset efficient frontier
+    """
+    weights = optimal_weights(n_points, er, cov,12)
+    rets = [portfolio_return(w, er) for w in weights]
+    vols = [portfolio_vol(w, cov) for w in weights]
+    ef = pd.DataFrame({
+        "Returns": rets, 
+        "Volatility": vols
+    })
+    ax = ef.plot.line(x="Volatility", y="Returns", style=style, legend=legend)
+    if show_cml:
+        ax.set_xlim(left = 0)
+        # get MSR
+        w_msr = msr(riskfree_rate, er, cov)
+        r_msr = portfolio_return(w_msr, er)
+        vol_msr = portfolio_vol(w_msr, cov)
+        # add CML
+        cml_x = [0, vol_msr]
+        cml_y = [riskfree_rate, r_msr]
+        ax.plot(cml_x, cml_y, color='green', marker='o', linestyle='dashed', linewidth=2, markersize=12)
+    return ax
+
 def get_ind_market_caps(nind=30, weights=False):
     '''
     Load the industry portfolio dataset and returns single industries market caps.
